@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Télécharge les poids des modèles face-api.js (SSD MobileNet v1,
+// Télécharge les poids des modèles face-api.js (Tiny Face Detector,
 // Face Landmark 68 et Face Recognition) dans functions/models/.
 // Ces modèles sont nécessaires pour extraire les empreintes faciales
 // (vecteurs 128-D) directement dans la Cloud Function.
@@ -15,9 +15,8 @@ const MODELS_DIR = path.join(__dirname, '..', 'models');
 // Chaque modèle vit dans son propre sous-dossier du repo en amont ;
 // on les télécharge tous à plat dans functions/models/.
 const FILES = [
-  'ssd_mobilenetv1/ssd_mobilenetv1_model-weights_manifest.json',
-  'ssd_mobilenetv1/ssd_mobilenetv1_model-shard1',
-  'ssd_mobilenetv1/ssd_mobilenetv1_model-shard2',
+  'tiny_face_detector/tiny_face_detector_model-weights_manifest.json',
+  'tiny_face_detector/tiny_face_detector_model-shard1',
   'face_landmark_68/face_landmark_68_model-weights_manifest.json',
   'face_landmark_68/face_landmark_68_model-shard1',
   'face_recognition/face_recognition_model-weights_manifest.json',

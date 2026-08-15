@@ -92,6 +92,8 @@ export default function ScanScreen({ navigation }) {
         <CameraCapture
           style={styles.camera}
           status={status}
+          resizeWidth={360}
+          compressQuality={0.6}
           hint={
             status === 'scanning'
               ? 'Analyse en cours…'

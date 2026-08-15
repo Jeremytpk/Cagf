@@ -16,6 +16,8 @@ export default function CameraCapture({
   defaultFacing = 'front',
   status = 'idle',
   hint = 'Centrez votre visage dans le carré',
+  resizeWidth = 480,
+  compressQuality = 0.7,
   style,
 }) {
   const [permission, requestPermission] = useCameraPermissions();
@@ -38,8 +40,8 @@ export default function CameraCapture({
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.7, skipProcessing: true });
       const manipulated = await manipulateAsync(
         photo.uri,
-        [{ resize: { width: 480 } }],
-        { compress: 0.7, format: SaveFormat.JPEG, base64: true }
+        [{ resize: { width: resizeWidth } }],
+        { compress: compressQuality, format: SaveFormat.JPEG, base64: true }
       );
       onCapture?.(manipulated.base64);
     } catch (error) {

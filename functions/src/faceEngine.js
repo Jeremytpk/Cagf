@@ -15,7 +15,7 @@ let loadPromise = null;
 function ensureModelsLoaded() {
   if (!loadPromise) {
     loadPromise = Promise.all([
-      faceapi.nets.ssdMobilenetv1.loadFromDisk(MODELS_PATH),
+      faceapi.nets.tinyFaceDetector.loadFromDisk(MODELS_PATH),
       faceapi.nets.faceLandmark68Net.loadFromDisk(MODELS_PATH),
       faceapi.nets.faceRecognitionNet.loadFromDisk(MODELS_PATH),
     ]).catch((error) => {
@@ -35,13 +35,18 @@ function decodeBase64Image(base64) {
 // Se concentre uniquement sur la structure rigide du visage (yeux, nez, bouche,
 // alignement osseux) grâce au modèle de reconnaissance faciale — insensible
 // à la coiffure, à la barbe ou aux vêtements.
+//
+// TinyFaceDetector plutôt que SsdMobilenetv1 : mesuré ~10x plus rapide en local
+// (≈0,6-0,8s contre ≈6-7s pour détection+repères+descripteur sur la même image,
+// backend CPU JS pur) sans backend natif tfjs. Largement suffisant ici puisqu'on
+// ne cherche qu'un seul visage, déjà centré par le cadre de guidage caméra.
 async function extractFaceDescriptor(base64Image) {
   await ensureModelsLoaded();
   const buffer = decodeBase64Image(base64Image);
   const image = await loadImage(buffer);
 
   const detection = await faceapi
-    .detectSingleFace(image, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+    .detectSingleFace(image, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
     .withFaceLandmarks()
     .withFaceDescriptor();
 
