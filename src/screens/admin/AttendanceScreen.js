@@ -1,12 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, SectionList } from 'react-native';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, onSnapshot, orderBy, query, limit } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import InputField from '../../components/InputField';
 import EmptyState from '../../components/EmptyState';
-import { colors, radius, spacing, typography } from '../../theme/theme';
+import { colors, radius, shadow, spacing, typography } from '../../theme/theme';
+
+const ATTENDANCE_COLUMNS = [
+  { key: 'employeeId', label: 'Identifiant' },
+  { key: 'name', label: 'Nom' },
+  { key: 'type', label: 'Type' },
+  { key: 'date', label: 'Date et heure' },
+];
 
 function dateLabel(date) {
   const today = new Date();
@@ -19,7 +26,7 @@ function dateLabel(date) {
   return date.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long' });
 }
 
-export default function AttendanceScreen() {
+export default function AttendanceScreen({ navigation }) {
   const [records, setRecords] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -33,14 +40,15 @@ export default function AttendanceScreen() {
     return unsubscribe;
   }, []);
 
-  const sections = useMemo(() => {
+  const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const filtered = term
-      ? records.filter(
-          (r) => r.name?.toLowerCase().includes(term) || r.employeeId?.toLowerCase().includes(term)
-        )
-      : records;
+    if (!term) return records;
+    return records.filter(
+      (r) => r.name?.toLowerCase().includes(term) || r.employeeId?.toLowerCase().includes(term)
+    );
+  }, [records, search]);
 
+  const sections = useMemo(() => {
     const groups = new Map();
     filtered.forEach((record) => {
       const date = record.timestamp?.toDate ? record.timestamp.toDate() : new Date();
@@ -49,7 +57,30 @@ export default function AttendanceScreen() {
       groups.get(key).data.push(record);
     });
     return Array.from(groups.values());
-  }, [records, search]);
+  }, [filtered]);
+
+  const handleExport = () => {
+    const rows = filtered.map((record) => ({
+      employeeId: record.employeeId || '—',
+      name: record.name || '—',
+      type: record.type === 'in' ? 'Entrée' : 'Sortie',
+      date: record.timestamp?.toDate
+        ? record.timestamp.toDate().toLocaleString('fr-FR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : '—',
+    }));
+    navigation.navigate('ReportPreview', {
+      title: 'Rapport des présences',
+      subtitle: 'Historique des entrées et sorties',
+      columns: ATTENDANCE_COLUMNS,
+      rows,
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
@@ -98,6 +129,16 @@ export default function AttendanceScreen() {
           </View>
         )}
       />
+
+      {filtered.length > 0 ? (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={handleExport}
+          accessibilityLabel="Exporter les présences en PDF"
+        >
+          <Ionicons name="download-outline" size={26} color={colors.white} />
+        </TouchableOpacity>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -134,4 +175,16 @@ const styles = StyleSheet.create({
   name: { ...typography.body, fontWeight: '600' },
   meta: { ...typography.caption },
   time: { ...typography.caption, fontWeight: '600', color: colors.textPrimary },
+  fab: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.floating,
+  },
 });
