@@ -173,10 +173,10 @@ export default function ScanScreen({ navigation }) {
             <View style={styles.resultHeader}>
               <Ionicons
                 name={status === 'success' ? 'checkmark-circle' : 'close-circle'}
-                size={22}
+                size={status === 'success' ? 30 : 22}
                 color={colors.white}
               />
-              <Text style={styles.resultText}>{message}</Text>
+              <Text style={[styles.resultText, status === 'success' && styles.resultTextSuccess]}>{message}</Text>
             </View>
             {status === 'error' ? (
               <View style={styles.resultActions}>
@@ -302,7 +302,8 @@ const styles = StyleSheet.create({
   successBanner: { backgroundColor: colors.accent },
   errorBanner: { backgroundColor: colors.danger },
   resultHeader: { flexDirection: 'row', alignItems: 'center' },
-  resultText: { color: colors.white, fontWeight: '600', marginLeft: spacing.sm, flex: 1 },
+  resultText: { color: colors.white, fontWeight: '600', fontSize: 15, marginLeft: spacing.sm, flex: 1 },
+  resultTextSuccess: { fontSize: 20, fontWeight: '700', lineHeight: 26 },
   resultActions: { flexDirection: 'row', marginTop: spacing.md, gap: spacing.sm },
   resultButton: {
     flex: 1,
