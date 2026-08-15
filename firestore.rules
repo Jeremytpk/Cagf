@@ -1,0 +1,46 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Liste des UID Firebase Auth autorisés en tant qu'administrateurs.
+    // Écriture directe depuis le client toujours interdite (write: false).
+    // Les seules façons de créer un doc admin sont : manuellement (console
+    // Firebase / Admin SDK), ou via la Cloud Function bootstrapAdmin, qui
+    // n'accorde les droits que pour le tout premier compte (collection vide)
+    // et utilise l'Admin SDK côté serveur — donc en dehors de ces règles.
+    match /admins/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
+    // Contient les face_vector : lecture/écriture réservées aux admins.
+    // La borne de pointage publique ne lit jamais cette collection directement —
+    // toute la comparaison faciale passe par la Cloud Function verifyEmployee
+    // (Admin SDK, qui contourne ces règles côté serveur).
+    match /employees/{employeeId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Historique des pointages : lecture admin uniquement. Les écritures ne
+    // passent que par la Cloud Function identifyEmployee (Admin SDK), jamais
+    // directement depuis un client, pour empêcher toute falsification.
+    match /attendance/{recordId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Signalements créés par la Cloud Function reportScanFailure après
+    // plusieurs échecs de reconnaissance consécutifs sur la borne publique.
+    // Lecture admin uniquement ; écriture uniquement via l'Admin SDK.
+    match /scanAlerts/{alertId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+  }
+}
