@@ -31,39 +31,52 @@ export default function ScanAlertsScreen() {
             <EmptyState
               icon="shield-checkmark-outline"
               title="Aucun signalement"
-              subtitle="Les échecs de reconnaissance répétés sur la borne apparaîtront ici."
+              subtitle="Les échecs de vérification (code ou visage) sur la borne apparaîtront ici."
             />
           ) : null
         }
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            {item.photoBase64 ? (
-              <Image source={{ uri: `data:image/jpeg;base64,${item.photoBase64}` }} style={styles.thumb} />
-            ) : (
-              <View style={[styles.thumb, styles.thumbPlaceholder]}>
-                <Ionicons name="person-outline" size={22} color={colors.textMuted} />
+        renderItem={({ item }) => {
+          const isCodeMismatch = item.type === 'code_mismatch';
+          return (
+            <View style={styles.row}>
+              {!isCodeMismatch && item.photoBase64 ? (
+                <Image source={{ uri: `data:image/jpeg;base64,${item.photoBase64}` }} style={styles.thumb} />
+              ) : (
+                <View style={[styles.thumb, styles.thumbPlaceholder]}>
+                  <Ionicons
+                    name={isCodeMismatch ? 'keypad-outline' : 'person-outline'}
+                    size={22}
+                    color={colors.textMuted}
+                  />
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.title}>
+                  {isCodeMismatch
+                    ? 'Code secret invalide saisi'
+                    : `Visage non reconnu${item.name ? ` — ${item.name}` : ''}`}
+                </Text>
+                <Text style={styles.meta}>
+                  {item.type == null
+                    ? `${item.attempts} échecs consécutifs`
+                    : !isCodeMismatch && item.similarity != null
+                    ? `Ressemblance avec le code saisi : ${Math.round(item.similarity * 100)}%`
+                    : null}
+                </Text>
+                <Text style={styles.meta}>
+                  {item.createdAt?.toDate
+                    ? item.createdAt.toDate().toLocaleString('fr-FR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : '—'}
+                </Text>
               </View>
-            )}
-            <View style={{ flex: 1 }}>
-              <Text style={styles.title}>{item.attempts} échecs consécutifs</Text>
-              <Text style={styles.meta}>
-                {item.similarity != null
-                  ? `Meilleure ressemblance : ${Math.round(item.similarity * 100)}%`
-                  : 'Aucun visage proche identifié'}
-              </Text>
-              <Text style={styles.meta}>
-                {item.createdAt?.toDate
-                  ? item.createdAt.toDate().toLocaleString('fr-FR', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  : '—'}
-              </Text>
             </View>
-          </View>
-        )}
+          );
+        }}
       />
     </SafeAreaView>
   );

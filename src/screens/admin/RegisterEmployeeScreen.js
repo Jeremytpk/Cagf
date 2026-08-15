@@ -39,7 +39,7 @@ export default function RegisterEmployeeScreen({ navigation }) {
       });
       Alert.alert(
         'Employé enregistré',
-        `${result.name} a été ajouté avec succès.\nIdentifiant : ${result.employeeId}`,
+        `${result.name} a été ajouté avec succès.\nIdentifiant : ${result.employeeId}\n\nCode secret : ${result.code}\n\nTransmettez-le à l'employé. Vous pourrez le reconsulter à tout moment depuis sa fiche.`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (error) {

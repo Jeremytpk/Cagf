@@ -35,12 +35,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Signalements créés par la Cloud Function reportScanFailure après
-    // plusieurs échecs de reconnaissance consécutifs sur la borne publique.
+    // Signalements créés par verifyEmployeeCode/verifyEmployeeFace à chaque
+    // échec (code invalide ou visage ne correspondant pas au code saisi).
     // Lecture admin uniquement ; écriture uniquement via l'Admin SDK.
     match /scanAlerts/{alertId} {
       allow read: if isAdmin();
       allow write: if false;
+    }
+
+    // Index code secret → employeeId (clé = HMAC-SHA256 du code avec le
+    // pepper serveur). Jamais lu ni écrit par un client, uniquement par les
+    // Cloud Functions via l'Admin SDK — même un admin ne doit pas pouvoir
+    // lister les hachages.
+    match /employeeCodes/{codeHash} {
+      allow read, write: if false;
     }
   }
 }

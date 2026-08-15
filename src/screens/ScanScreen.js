@@ -1,36 +1,115 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar as RNStatusBar } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  StatusBar as RNStatusBar,
+  InteractionManager,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import CameraCapture from '../components/CameraCapture';
+import CodeKeypad from '../components/CodeKeypad';
 import Card from '../components/Card';
-import PrimaryButton from '../components/PrimaryButton';
-import { identifyEmployee, reportScanFailure } from '../services/api';
+import { verifyEmployeeCode, verifyEmployeeFace } from '../services/api';
 import { colors, radius, spacing, typography } from '../theme/theme';
 
 const RESULT_DISPLAY_MS = 2600;
-const REPORT_EVERY = 3;
+const CODE_LENGTH = 6;
+const MAX_CODE_ATTEMPTS = 5;
+const LOCKOUT_MS = 30000;
 
 export default function ScanScreen({ navigation }) {
-  const [cameraOpen, setCameraOpen] = useState(false);
+  const [stage, setStage] = useState('code'); // code | face
+  const [code, setCode] = useState('');
+  const [codeVerifying, setCodeVerifying] = useState(false);
+  const [codeError, setCodeError] = useState(null);
+  const [employee, setEmployee] = useState(null);
+  const [codeFailCount, setCodeFailCount] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState(null);
+  const [lockCountdown, setLockCountdown] = useState(0);
+
   const [status, setStatus] = useState('idle'); // idle | scanning | success | error
   const [message, setMessage] = useState(null);
-  const [failureCount, setFailureCount] = useState(0);
+
+  const lockTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (!lockedUntil) return undefined;
+    lockTimerRef.current = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000));
+      setLockCountdown(remaining);
+      if (remaining <= 0) {
+        clearInterval(lockTimerRef.current);
+        setLockedUntil(null);
+        setCodeFailCount(0);
+      }
+    }, 500);
+    return () => clearInterval(lockTimerRef.current);
+  }, [lockedUntil]);
 
   const resetToIdle = () => {
-    setCameraOpen(false);
-    setStatus('idle');
-    setMessage(null);
-    setFailureCount(0);
-  };
-
-  const handleRetry = () => {
+    setStage('code');
+    setCode('');
+    setCodeError(null);
+    setEmployee(null);
     setStatus('idle');
     setMessage(null);
   };
 
-  const handleSuccess = (result) => {
-    console.log('[ScanScreen] identifyEmployee succeeded:', result);
+  const handleCodeChange = (nextCode) => {
+    setCodeError(null);
+    setCode(nextCode);
+  };
+
+  useEffect(() => {
+    if (code.length !== CODE_LENGTH || codeVerifying || lockedUntil) return;
+
+    let cancelled = false;
+    setCodeVerifying(true);
+    verifyEmployeeCode({ code })
+      .then((result) => {
+        if (cancelled) return;
+        if (result.success) {
+          // Différé après la fin des interactions en cours : monter la vue
+          // caméra (native, coûteuse) directement dans la continuation d'une
+          // promesse réseau plutôt que dans un handler de geste synchrone
+          // peut geler le pont JS/natif sur iOS. runAfterInteractions laisse
+          // le thread JS se stabiliser avant ce montage.
+          InteractionManager.runAfterInteractions(() => {
+            setEmployee({ employeeId: result.employeeId, name: result.name });
+            setStage('face');
+            setCode('');
+          });
+        } else {
+          const next = codeFailCount + 1;
+          setCodeFailCount(next);
+          setCode('');
+          if (next >= MAX_CODE_ATTEMPTS) {
+            setLockedUntil(Date.now() + LOCKOUT_MS);
+            setCodeError(`Trop de tentatives. Réessayez dans ${Math.ceil(LOCKOUT_MS / 1000)}s.`);
+          } else {
+            setCodeError(result.message || 'Code invalide.');
+          }
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setCode('');
+        setCodeError(error.message || 'Une erreur est survenue.');
+      })
+      .finally(() => {
+        if (!cancelled) setCodeVerifying(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
+
+  const handleFaceSuccess = (result) => {
     const time = result.timestamp
       ? new Date(result.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
       : new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -40,53 +119,35 @@ export default function ScanScreen({ navigation }) {
         ? `Merci, ${result.name} ! Entrée enregistrée à ${time}.`
         : `Merci, ${result.name} ! Sortie enregistrée à ${time}.`
     );
-    setFailureCount(0);
     setTimeout(resetToIdle, RESULT_DISPLAY_MS);
   };
 
-  const handleFailure = (msg, photoBase64, similarity, reason) => {
-    console.warn('[ScanScreen] scan failed:', msg, { reason, similarity });
+  const handleFaceFailure = (msg) => {
     setStatus('error');
-    const next = failureCount + 1;
-    setFailureCount(next);
-
-    if (next % REPORT_EVERY === 0) {
-      reportScanFailure({ photoBase64: photoBase64 || null, attempts: next, similarity }).catch((reportError) => {
-        console.error('[ScanScreen] reportScanFailure failed:', reportError);
-      });
-      setMessage(`${msg} Un signalement a été envoyé à l'administrateur après ${next} échecs consécutifs.`);
-    } else {
-      setMessage(msg);
-    }
+    setMessage(msg);
   };
 
   const handleCapture = async (base64, captureError) => {
     if (captureError || !base64) {
-      handleFailure('Échec de la capture. Veuillez réessayer.', base64, null, captureError);
+      handleFaceFailure('Échec de la capture. Veuillez réessayer.');
       return;
     }
 
     setStatus('scanning');
     setMessage(null);
     try {
-      const result = await identifyEmployee({ photoBase64: base64 });
+      const result = await verifyEmployeeFace({ employeeId: employee.employeeId, photoBase64: base64 });
       if (result.success) {
-        handleSuccess(result);
+        handleFaceSuccess(result);
       } else {
-        handleFailure(
-          result.message || 'Visage non reconnu. Veuillez réessayer.',
-          base64,
-          result.similarity,
-          'no_match'
-        );
+        handleFaceFailure(result.message || 'Visage non reconnu. Veuillez réessayer.');
       }
     } catch (error) {
-      console.error('[ScanScreen] identifyEmployee request failed:', error);
-      handleFailure(error.message || 'Une erreur est survenue.', base64, null, error);
+      handleFaceFailure(error.message || 'Une erreur est survenue.');
     }
   };
 
-  if (cameraOpen) {
+  if (stage === 'face') {
     return (
       <View style={styles.cameraRoot}>
         <CameraCapture
@@ -101,7 +162,7 @@ export default function ScanScreen({ navigation }) {
               ? 'Reconnu !'
               : status === 'error'
               ? 'Non reconnu'
-              : 'Centrez votre visage dans le carré'
+              : `Bonjour ${employee?.name || ''}, centrez votre visage`
           }
           onCapture={status === 'idle' ? handleCapture : undefined}
           onCancel={resetToIdle}
@@ -119,8 +180,14 @@ export default function ScanScreen({ navigation }) {
             </View>
             {status === 'error' ? (
               <View style={styles.resultActions}>
-                <TouchableOpacity style={styles.resultButton} onPress={handleRetry}>
-                  <Text style={styles.resultButtonText}>Réessayer</Text>
+                <TouchableOpacity
+                  style={styles.resultButton}
+                  onPress={() => {
+                    setStatus('idle');
+                    setMessage(null);
+                  }}
+                >
+                  <Text style={styles.resultButtonText}>Réessayer la photo</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.resultButton, styles.resultButtonOutline]}
@@ -154,19 +221,28 @@ export default function ScanScreen({ navigation }) {
 
       <View style={styles.content}>
         <View style={styles.heroIconWrap}>
-          <Ionicons name="scan-circle-outline" size={72} color={colors.primary} />
+          <Ionicons name="keypad-outline" size={64} color={colors.primary} />
         </View>
         <Text style={styles.title}>Bonjour !</Text>
         <Text style={styles.subtitle}>
-          Scannez votre visage pour pointer votre entrée ou votre sortie. Aucun identifiant n'est nécessaire.
+          Entrez votre code secret à {CODE_LENGTH} chiffres, puis scannez votre visage pour pointer.
         </Text>
 
         <Card style={styles.card}>
-          <PrimaryButton label="Scanner mon visage" icon="scan-outline" onPress={() => setCameraOpen(true)} />
+          <CodeKeypad
+            length={CODE_LENGTH}
+            value={code}
+            onChange={handleCodeChange}
+            disabled={codeVerifying || !!lockedUntil}
+          />
+          {codeError ? <Text style={styles.errorText}>{codeError}</Text> : null}
+          {lockedUntil ? (
+            <Text style={styles.errorText}>Borne verrouillée : {lockCountdown}s restantes.</Text>
+          ) : null}
         </Card>
       </View>
 
-      <Text style={styles.footer}>Un système développé par Jerttech</Text>
+      <Text style={styles.footer}>Développé par Jerttech</Text>
     </SafeAreaView>
   );
 }
@@ -191,7 +267,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
   },
   content: { flex: 1, paddingHorizontal: spacing.lg, justifyContent: 'center' },
-  heroIconWrap: { alignItems: 'center', marginBottom: spacing.md },
+  heroIconWrap: { alignItems: 'center', marginBottom: spacing.sm },
   title: { ...typography.h1, textAlign: 'center', marginBottom: spacing.xs },
   subtitle: {
     ...typography.body,
@@ -200,7 +276,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     paddingHorizontal: spacing.md,
   },
-  card: { marginTop: spacing.sm },
+  card: { marginTop: spacing.sm, alignItems: 'center' },
+  errorText: {
+    ...typography.caption,
+    color: colors.danger,
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
   footer: {
     ...typography.caption,
     textAlign: 'center',
