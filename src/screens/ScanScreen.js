@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
   StatusBar as RNStatusBar,
@@ -207,7 +208,11 @@ export default function ScanScreen({ navigation }) {
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.brand}>CAGF</Text>
+          <Image
+            source={require('../../assets/CAGFLogo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.brandSubtitle}>Pointage intelligent</Text>
         </View>
         <TouchableOpacity
@@ -248,7 +253,7 @@ export default function ScanScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
+  safeArea: { flex: 1, backgroundColor: "white" },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -256,8 +261,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
   },
-  brand: { ...typography.h1, color: colors.primary },
-  brandSubtitle: { ...typography.caption },
+  logo: { width: 108, height: 44, borderRadius: 8 },
+  brandSubtitle: { ...typography.caption, marginTop: spacing.xs },
   loginButton: {
     width: 44,
     height: 44,

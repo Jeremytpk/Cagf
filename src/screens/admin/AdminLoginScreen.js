@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '../../components/Card';
@@ -37,7 +37,11 @@ export default function AdminLoginScreen({ navigation }) {
 
         <View style={styles.content}>
           <View style={styles.iconWrap}>
-            <Ionicons name="shield-checkmark-outline" size={48} color={colors.primary} />
+            <Image
+              source={require('../../../assets/CAGFLogo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.title}>Espace administrateur</Text>
           <Text style={styles.subtitle}>Connectez-vous pour gérer les employés et suivre les présences.</Text>
@@ -82,7 +86,7 @@ export default function AdminLoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
+  safeArea: { flex: 1, backgroundColor: "white" },
   backButton: {
     width: 40,
     height: 40,
@@ -93,6 +97,7 @@ const styles = StyleSheet.create({
   },
   content: { flex: 1, paddingHorizontal: spacing.lg, justifyContent: 'center' },
   iconWrap: { alignItems: 'center', marginBottom: spacing.md },
+  logo: { width: 300, height: 121, borderRadius: 20, bottom: 40 },
   title: { ...typography.h1, textAlign: 'center', marginBottom: spacing.xs },
   subtitle: { ...typography.body, color: colors.textSecondary, textAlign: 'center' },
   error: { color: colors.danger, marginBottom: spacing.md, textAlign: 'center' },
