@@ -134,6 +134,45 @@ export default function ScanScreen({ navigation }) {
     setMessage(msg);
   };
 
+  // Vérification silencieuse au démarrage : si une mise à jour existe déjà,
+  // on le signale à l'utilisateur au lieu d'attendre qu'il pense à vérifier
+  // manuellement.
+  useEffect(() => {
+    if (!Updates.isEnabled) return undefined;
+    let cancelled = false;
+    Updates.checkForUpdateAsync()
+      .then((result) => {
+        if (!cancelled && result.isAvailable) {
+          setUpdateState('prompt');
+          setUpdateMessage(
+            "Appuyez sur « Mettre à jour maintenant » pour l'installer tout de suite, ou fermez et rouvrez l'application plus tard pour qu'elle s'applique automatiquement. Dans les deux cas, l'application redémarre automatiquement une fois la mise à jour installée."
+          );
+        }
+      })
+      .catch(() => {
+        // Échec silencieux : pas d'interruption pour un simple contrôle en arrière-plan.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const downloadAndApplyUpdate = async () => {
+    setUpdateState('downloading');
+    setUpdateMessage('Téléchargement de la mise à jour…');
+    try {
+      await Updates.fetchUpdateAsync();
+      setUpdateState('ready');
+      setUpdateMessage("Mise à jour installée. L'application va redémarrer automatiquement…");
+      setTimeout(() => {
+        Updates.reloadAsync();
+      }, 1500);
+    } catch (error) {
+      setUpdateState('error');
+      setUpdateMessage(error.message || 'Le téléchargement de la mise à jour a échoué.');
+    }
+  };
+
   const handleCheckForUpdate = async () => {
     if (!Updates.isEnabled) {
       setUpdateState('error');
@@ -150,19 +189,11 @@ export default function ScanScreen({ navigation }) {
         setUpdateMessage("Vous utilisez déjà la dernière version de l'application.");
         return;
       }
-
-      setUpdateState('downloading');
-      await Updates.fetchUpdateAsync();
-      setUpdateState('ready');
-      setUpdateMessage('Mise à jour téléchargée avec succès.');
+      await downloadAndApplyUpdate();
     } catch (error) {
       setUpdateState('error');
       setUpdateMessage(error.message || 'Impossible de vérifier les mises à jour. Vérifiez votre connexion.');
     }
-  };
-
-  const handleApplyUpdate = () => {
-    Updates.reloadAsync();
   };
 
   const closeUpdateModal = () => {
@@ -312,10 +343,18 @@ export default function ScanScreen({ navigation }) {
                     ? 'checkmark-circle'
                     : updateState === 'none'
                     ? 'information-circle'
+                    : updateState === 'prompt'
+                    ? 'cloud-download-outline'
                     : 'alert-circle'
                 }
                 size={48}
-                color={updateState === 'ready' ? colors.accent : updateState === 'none' ? colors.primary : colors.danger}
+                color={
+                  updateState === 'ready'
+                    ? colors.accent
+                    : updateState === 'none' || updateState === 'prompt'
+                    ? colors.primary
+                    : colors.danger
+                }
                 style={{ marginBottom: spacing.md }}
               />
             )}
@@ -326,17 +365,27 @@ export default function ScanScreen({ navigation }) {
                 : updateState === 'downloading'
                 ? 'Téléchargement de la mise à jour…'
                 : updateState === 'ready'
-                ? 'Mise à jour prête'
+                ? 'Mise à jour installée'
                 : updateState === 'none'
                 ? 'Aucune mise à jour'
+                : updateState === 'prompt'
+                ? 'Mise à jour disponible'
                 : 'Erreur'}
             </Text>
             {updateMessage ? <Text style={styles.modalMessage}>{updateMessage}</Text> : null}
 
-            {updateState === 'ready' ? (
-              <TouchableOpacity style={styles.modalButton} onPress={handleApplyUpdate}>
-                <Text style={styles.modalButtonText}>Redémarrer maintenant</Text>
-              </TouchableOpacity>
+            {updateState === 'prompt' ? (
+              <View style={styles.modalButtonRow}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonOutline, { flex: 1 }]}
+                  onPress={closeUpdateModal}
+                >
+                  <Text style={[styles.modalButtonText, styles.modalButtonOutlineText]}>Annuler</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.modalButton, { flex: 1 }]} onPress={downloadAndApplyUpdate}>
+                  <Text style={styles.modalButtonText}>Mettre à jour maintenant</Text>
+                </TouchableOpacity>
+              </View>
             ) : updateState === 'none' || updateState === 'error' ? (
               <TouchableOpacity style={[styles.modalButton, styles.modalButtonOutline]} onPress={closeUpdateModal}>
                 <Text style={[styles.modalButtonText, styles.modalButtonOutlineText]}>Fermer</Text>
@@ -425,6 +474,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.lg,
   },
+  modalButtonRow: { flexDirection: 'row', width: '100%', gap: spacing.sm },
   modalButton: {
     width: '100%',
     backgroundColor: colors.primary,
