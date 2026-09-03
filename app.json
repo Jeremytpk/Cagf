@@ -2,6 +2,7 @@
   "expo": {
     "name": "CAGF",
     "slug": "CAGF",
+    "owner": "jeremytpk",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,6 +14,7 @@
       }
     },
     "android": {
+      "package": "com.jerttech.cagf",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -30,7 +32,19 @@
         {
           "cameraPermission": "CAGF a besoin de la caméra pour reconnaître votre visage lors de l'enregistrement et du pointage."
         }
-      ]
-    ]
+      ],
+      "@react-native-community/datetimepicker"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9ba6f355-8312-49a0-be57-985c8fec4017"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/9ba6f355-8312-49a0-be57-985c8fec4017"
+    }
   }
 }
