@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '../../components/Card';
@@ -30,12 +30,20 @@ export default function AdminLoginScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+      >
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
 
-        <View style={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.iconWrap}>
             <Image
               source={require('../../../assets/CAGFLogo.png')}
@@ -79,7 +87,7 @@ export default function AdminLoginScreen({ navigation }) {
           >
             <Text style={styles.signupLinkText}>Aucun administrateur ? Créer le premier compte</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -95,7 +103,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  content: { flex: 1, paddingHorizontal: spacing.lg, justifyContent: 'center' },
+  content: { flexGrow: 1, paddingHorizontal: spacing.lg, justifyContent: 'center' },
   iconWrap: { alignItems: 'center', marginBottom: spacing.md },
   logo: { width: 300, height: 121, borderRadius: 20, bottom: 40 },
   title: { ...typography.h1, textAlign: 'center', marginBottom: spacing.xs },

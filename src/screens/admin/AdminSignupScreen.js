@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '../../components/Card';
@@ -39,12 +39,20 @@ export default function AdminSignupScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+      >
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
 
-        <View style={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.iconWrap}>
             <Ionicons name="shield-checkmark-outline" size={48} color={colors.primary} />
           </View>
@@ -86,7 +94,7 @@ export default function AdminSignupScreen({ navigation }) {
               disabled={!email.trim() || !password || !confirmPassword}
             />
           </Card>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -102,7 +110,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  content: { flex: 1, paddingHorizontal: spacing.lg, justifyContent: 'center' },
+  content: { flexGrow: 1, paddingHorizontal: spacing.lg, justifyContent: 'center' },
   iconWrap: { alignItems: 'center', marginBottom: spacing.md },
   title: { ...typography.h1, textAlign: 'center', marginBottom: spacing.xs },
   subtitle: { ...typography.body, color: colors.textSecondary, textAlign: 'center' },
