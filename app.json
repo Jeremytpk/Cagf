@@ -5,7 +5,7 @@
     "owner": "jeremytpk",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/cagf_icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
@@ -15,16 +15,12 @@
     },
     "android": {
       "package": "com.jerttech.cagf",
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      },
-      "permissions": ["CAMERA"]
+      "permissions": [
+        "CAMERA"
+      ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/cagf_icon.png"
     },
     "plugins": [
       [
@@ -33,7 +29,8 @@
           "cameraPermission": "CAGF a besoin de la caméra pour reconnaître votre visage lors de l'enregistrement et du pointage."
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-font"
     ],
     "extra": {
       "eas": {
