@@ -43,6 +43,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Congés des employés. Lecture admin uniquement ; écritures réservées aux
+    // Cloud Functions addVacation/updateVacation/deleteVacation (Admin SDK),
+    // même convention que employees/attendance/scanAlerts.
+    match /vacations/{vacationId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Index code secret → employeeId (clé = HMAC-SHA256 du code avec le
     // pepper serveur). Jamais lu ni écrit par un client, uniquement par les
     // Cloud Functions via l'Admin SDK — même un admin ne doit pas pouvoir

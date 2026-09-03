@@ -72,6 +72,31 @@ export function deleteEmployee({ idToken, employeeId }) {
   });
 }
 
+// Admin uniquement — crée un congé pour un employé. startDate/endDate au
+// format 'YYYY-MM-JJ'.
+export function addVacation({ idToken, employeeId, startDate, endDate, reason }) {
+  return callFunction('addVacation', {
+    idToken,
+    body: { employeeId, startDate, endDate, reason },
+  });
+}
+
+// Admin uniquement — met à jour les dates et/ou le motif d'un congé existant.
+export function updateVacation({ idToken, vacationId, startDate, endDate, reason }) {
+  return callFunction('updateVacation', {
+    idToken,
+    body: { vacationId, startDate, endDate, reason },
+  });
+}
+
+// Admin uniquement — supprime un congé.
+export function deleteVacation({ idToken, vacationId }) {
+  return callFunction('deleteVacation', {
+    idToken,
+    body: { vacationId },
+  });
+}
+
 // Admin uniquement — émet un nouveau code secret pour un employé existant
 // (ex. code oublié/compromis). N'affecte ni le nom, ni le service, ni la photo.
 export function regenerateEmployeeCode({ idToken, employeeId }) {

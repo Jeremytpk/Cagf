@@ -8,6 +8,7 @@ import DashboardScreen from '../screens/admin/DashboardScreen';
 import EmployeesListScreen from '../screens/admin/EmployeesListScreen';
 import AttendanceScreen from '../screens/admin/AttendanceScreen';
 import ScanAlertsScreen from '../screens/admin/ScanAlertsScreen';
+import VacationsListScreen from '../screens/admin/VacationsListScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -15,6 +16,7 @@ const ICONS = {
   Dashboard: 'grid-outline',
   Employees: 'people-outline',
   Attendance: 'time-outline',
+  Vacations: 'calendar-outline',
   Alerts: 'alert-circle-outline',
 };
 
@@ -22,6 +24,7 @@ const TITLES = {
   Dashboard: 'Tableau de bord',
   Employees: 'Employés',
   Attendance: 'Présences',
+  Vacations: 'Congés',
   Alerts: 'Alertes',
 };
 
@@ -53,6 +56,7 @@ export default function AdminTabNavigator({ navigation }) {
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Employees" component={EmployeesListScreen} />
       <Tab.Screen name="Attendance" component={AttendanceScreen} />
+      <Tab.Screen name="Vacations" component={VacationsListScreen} />
       <Tab.Screen name="Alerts" component={ScanAlertsScreen} />
     </Tab.Navigator>
   );

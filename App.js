@@ -15,6 +15,8 @@ import AdminTabNavigator from './src/navigation/AdminTabNavigator';
 import RegisterEmployeeScreen from './src/screens/admin/RegisterEmployeeScreen';
 import EditEmployeeScreen from './src/screens/admin/EditEmployeeScreen';
 import ReportPreviewScreen from './src/screens/admin/ReportPreviewScreen';
+import AddVacationScreen from './src/screens/admin/AddVacationScreen';
+import EditVacationScreen from './src/screens/admin/EditVacationScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -52,6 +54,16 @@ export default function App() {
                 name="ReportPreview"
                 component={ReportPreviewScreen}
                 options={{ title: 'Aperçu du rapport' }}
+              />
+              <Stack.Screen
+                name="AddVacation"
+                component={AddVacationScreen}
+                options={{ title: 'Nouveau congé' }}
+              />
+              <Stack.Screen
+                name="EditVacation"
+                component={EditVacationScreen}
+                options={{ title: 'Modifier le congé' }}
               />
             </Stack.Navigator>
           </NavigationContainer>

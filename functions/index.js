@@ -178,6 +178,89 @@ exports.deleteEmployee = onRequest(
   })
 );
 
+// POST /addVacation — Admin uniquement.
+// Body: { employeeId, startDate, endDate, reason? }
+// startDate/endDate au format 'YYYY-MM-JJ' (comparaison lexicographique).
+exports.addVacation = onRequest(
+  RUNTIME_OPTIONS,
+  handle(async (req, res) => {
+    if (req.method !== 'POST') return sendError(res, 405, 'Méthode non autorisée.');
+
+    const admin_ = await requireAdmin(req);
+    const { employeeId, startDate, endDate, reason } = req.body || {};
+    if (!employeeId || !startDate || !endDate) {
+      return sendError(res, 400, 'employeeId, startDate et endDate sont requis.');
+    }
+    if (String(startDate) > String(endDate)) {
+      return sendError(res, 400, 'La date de début doit précéder la date de fin.');
+    }
+
+    const employeeSnap = await db.collection('employees').doc(String(employeeId)).get();
+    if (!employeeSnap.exists) return sendError(res, 404, 'Employé introuvable.');
+
+    const vacationRef = db.collection('vacations').doc();
+    await vacationRef.set({
+      employeeId: String(employeeId),
+      employeeName: employeeSnap.data().name,
+      startDate: String(startDate),
+      endDate: String(endDate),
+      reason: reason || null,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdBy: admin_.uid,
+    });
+
+    res.status(200).json({ success: true, vacationId: vacationRef.id });
+  })
+);
+
+// POST /updateVacation — Admin uniquement.
+// Body: { vacationId, startDate?, endDate?, reason? }
+exports.updateVacation = onRequest(
+  RUNTIME_OPTIONS,
+  handle(async (req, res) => {
+    if (req.method !== 'POST') return sendError(res, 405, 'Méthode non autorisée.');
+
+    await requireAdmin(req);
+    const { vacationId, startDate, endDate, reason } = req.body || {};
+    if (!vacationId) return sendError(res, 400, 'vacationId est requis.');
+
+    const vacationRef = db.collection('vacations').doc(String(vacationId));
+    const existing = await vacationRef.get();
+    if (!existing.exists) return sendError(res, 404, 'Congé introuvable.');
+
+    const nextStart = startDate !== undefined ? String(startDate) : existing.data().startDate;
+    const nextEnd = endDate !== undefined ? String(endDate) : existing.data().endDate;
+    if (nextStart > nextEnd) {
+      return sendError(res, 400, 'La date de début doit précéder la date de fin.');
+    }
+
+    const updates = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+    if (startDate !== undefined) updates.startDate = String(startDate);
+    if (endDate !== undefined) updates.endDate = String(endDate);
+    if (reason !== undefined) updates.reason = reason || null;
+
+    await vacationRef.update(updates);
+    res.status(200).json({ success: true, vacationId: String(vacationId) });
+  })
+);
+
+// POST /deleteVacation — Admin uniquement.
+// Body: { vacationId }
+exports.deleteVacation = onRequest(
+  RUNTIME_OPTIONS,
+  handle(async (req, res) => {
+    if (req.method !== 'POST') return sendError(res, 405, 'Méthode non autorisée.');
+
+    await requireAdmin(req);
+    const { vacationId } = req.body || {};
+    if (!vacationId) return sendError(res, 400, 'vacationId est requis.');
+
+    await db.collection('vacations').doc(String(vacationId)).delete();
+    res.status(200).json({ success: true });
+  })
+);
+
 // POST /regenerateEmployeeCode — Admin uniquement.
 // Body: { employeeId }
 // Émet un nouveau code secret (2e facteur) pour un employé existant, à la
