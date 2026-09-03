@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from '../../components/Card';
 import InputField from '../../components/InputField';
@@ -69,7 +69,12 @@ export default function EditVacationScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+      >
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Card>
           <InputField label="Employé" value={`${vacation.employeeName} (${vacation.employeeId})`} editable={false} style={{ opacity: 0.6 }} />
           <DateField label="Début" value={startDate} onChange={setStartDate} />
@@ -99,6 +104,7 @@ export default function EditVacationScreen({ navigation, route }) {
           style={{ marginTop: spacing.md }}
         />
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

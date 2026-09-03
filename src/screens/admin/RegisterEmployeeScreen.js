@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import CameraCapture from '../../components/CameraCapture';
@@ -51,7 +51,12 @@ export default function RegisterEmployeeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+      >
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Card>
           <InputField label="Nom complet" placeholder="Ex : Amina Diallo" value={name} onChangeText={setName} />
           <InputField
@@ -94,6 +99,7 @@ export default function RegisterEmployeeScreen({ navigation }) {
           style={{ marginTop: spacing.lg }}
         />
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
