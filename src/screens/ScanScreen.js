@@ -7,9 +7,12 @@ import {
   TouchableOpacity,
   StatusBar as RNStatusBar,
   InteractionManager,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Updates from 'expo-updates';
 import CameraCapture from '../components/CameraCapture';
 import CodeKeypad from '../components/CodeKeypad';
 import Card from '../components/Card';
@@ -33,6 +36,9 @@ export default function ScanScreen({ navigation }) {
 
   const [status, setStatus] = useState('idle'); // idle | scanning | success | error
   const [message, setMessage] = useState(null);
+
+  const [updateState, setUpdateState] = useState('idle'); // idle | checking | none | downloading | ready | error
+  const [updateMessage, setUpdateMessage] = useState(null);
 
   const lockTimerRef = useRef(null);
 
@@ -126,6 +132,42 @@ export default function ScanScreen({ navigation }) {
   const handleFaceFailure = (msg) => {
     setStatus('error');
     setMessage(msg);
+  };
+
+  const handleCheckForUpdate = async () => {
+    if (!Updates.isEnabled) {
+      setUpdateState('error');
+      setUpdateMessage("Les mises à jour ne sont pas disponibles dans cet environnement.");
+      return;
+    }
+
+    setUpdateState('checking');
+    setUpdateMessage(null);
+    try {
+      const result = await Updates.checkForUpdateAsync();
+      if (!result.isAvailable) {
+        setUpdateState('none');
+        setUpdateMessage("Vous utilisez déjà la dernière version de l'application.");
+        return;
+      }
+
+      setUpdateState('downloading');
+      await Updates.fetchUpdateAsync();
+      setUpdateState('ready');
+      setUpdateMessage('Mise à jour téléchargée avec succès.');
+    } catch (error) {
+      setUpdateState('error');
+      setUpdateMessage(error.message || 'Impossible de vérifier les mises à jour. Vérifiez votre connexion.');
+    }
+  };
+
+  const handleApplyUpdate = () => {
+    Updates.reloadAsync();
+  };
+
+  const closeUpdateModal = () => {
+    setUpdateState('idle');
+    setUpdateMessage(null);
   };
 
   const handleCapture = async (base64, captureError) => {
@@ -245,9 +287,64 @@ export default function ScanScreen({ navigation }) {
             <Text style={styles.errorText}>Borne verrouillée : {lockCountdown}s restantes.</Text>
           ) : null}
         </Card>
+
+        <TouchableOpacity
+          style={styles.updateButton}
+          onPress={handleCheckForUpdate}
+          disabled={updateState === 'checking' || updateState === 'downloading'}
+        >
+          <Ionicons name="refresh-outline" size={16} color={colors.textSecondary} />
+          <Text style={styles.updateButtonText}>Vérifier les mises à jour</Text>
+        </TouchableOpacity>
       </View>
 
       <Text style={styles.footer}>Développé par Jerttech</Text>
+
+      <Modal visible={updateState !== 'idle'} transparent animationType="fade" onRequestClose={closeUpdateModal}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            {updateState === 'checking' || updateState === 'downloading' ? (
+              <ActivityIndicator size="large" color={colors.primary} style={{ marginBottom: spacing.md }} />
+            ) : (
+              <Ionicons
+                name={
+                  updateState === 'ready'
+                    ? 'checkmark-circle'
+                    : updateState === 'none'
+                    ? 'information-circle'
+                    : 'alert-circle'
+                }
+                size={48}
+                color={updateState === 'ready' ? colors.accent : updateState === 'none' ? colors.primary : colors.danger}
+                style={{ marginBottom: spacing.md }}
+              />
+            )}
+
+            <Text style={styles.modalTitle}>
+              {updateState === 'checking'
+                ? 'Vérification en cours…'
+                : updateState === 'downloading'
+                ? 'Téléchargement de la mise à jour…'
+                : updateState === 'ready'
+                ? 'Mise à jour prête'
+                : updateState === 'none'
+                ? 'Aucune mise à jour'
+                : 'Erreur'}
+            </Text>
+            {updateMessage ? <Text style={styles.modalMessage}>{updateMessage}</Text> : null}
+
+            {updateState === 'ready' ? (
+              <TouchableOpacity style={styles.modalButton} onPress={handleApplyUpdate}>
+                <Text style={styles.modalButtonText}>Redémarrer maintenant</Text>
+              </TouchableOpacity>
+            ) : updateState === 'none' || updateState === 'error' ? (
+              <TouchableOpacity style={[styles.modalButton, styles.modalButtonOutline]} onPress={closeUpdateModal}>
+                <Text style={[styles.modalButtonText, styles.modalButtonOutlineText]}>Fermer</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -294,6 +391,50 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     paddingBottom: spacing.md,
   },
+  updateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  updateButtonText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginLeft: spacing.xs,
+    textDecorationLine: 'underline',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  modalTitle: { ...typography.h3, textAlign: 'center', marginBottom: spacing.xs },
+  modalMessage: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  modalButton: {
+    width: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  modalButtonText: { color: colors.white, fontWeight: '700', fontSize: 15 },
+  modalButtonOutline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.border },
+  modalButtonOutlineText: { color: colors.textPrimary },
   cameraRoot: { flex: 1, backgroundColor: '#000', paddingTop: (RNStatusBar.currentHeight || 0) },
   camera: { flex: 1, borderRadius: 0 },
   resultBanner: {
